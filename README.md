@@ -1,6 +1,11 @@
 # deribit-tick-collector
 
-High-performance, low-footprint Rust market data collector for **Deribit** options, perpetuals, and dated futures.
+[![CI](https://github.com/PTR-25/deribit-tick-collector/actions/workflows/ci.yml/badge.svg)](https://github.com/PTR-25/deribit-tick-collector/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/PTR-25/deribit-tick-collector)](https://github.com/PTR-25/deribit-tick-collector/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust 1.88+](https://img.shields.io/badge/rust-1.88%2B-orange.svg)](https://www.rust-lang.org/)
+
+High-performance, low-footprint Rust market data collector for **Deribit** options, perpetuals, and dated futures (both inverse and linear USDC markets).
 
 Captures lossless **tick-by-tick L2 order book updates** (with self-contained hourly checkpoints), **ticker / open interest / IV / Greeks / funding streams**, **public & combo/block trade prints**, **Deribit spot & DVOL volatility indices**, and **instrument lifecycle metadata** into query-ready, Hive-partitioned **Apache Parquet v2** datasets — with optional asynchronous S3 / R2 / MinIO archival and built-in inspection, compaction, and order-book replay verification tools.
 

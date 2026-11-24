@@ -73,8 +73,10 @@ pub struct DiscoveredCatalog {
     pub combos: Vec<InstrumentMeta>,
     /// Unique settlement currencies represented (e.g. `BTC`, `ETH`, `USDC`) for `trades.*` channels.
     pub settlement_currencies: BTreeSet<String>,
-    /// Unique Deribit index names represented (e.g. `btc_usd`, `eth_usd`, `sol_usdc`).
-    pub index_names: BTreeSet<String>,
+    /// Unique Deribit spot price index names represented (e.g. `btc_usd`, `eth_usd`, `sol_usdc`).
+    pub price_index_names: BTreeSet<String>,
+    /// Unique Deribit index names for option-bearing markets (for 30d DVOL subscriptions).
+    pub volatility_index_names: BTreeSet<String>,
 }
 
 impl DiscoveredCatalog {
@@ -135,7 +137,8 @@ impl InstrumentDiscovery {
         let mut dated_futures = Vec::new();
         let mut combos = Vec::new();
         let mut settlement_currencies = BTreeSet::new();
-        let mut index_names = BTreeSet::new();
+        let mut price_index_names = BTreeSet::new();
+        let mut volatility_index_names = BTreeSet::new();
 
         let now_ms = Utc::now().timestamp_millis();
         let max_exp_ms = cfg
@@ -160,7 +163,9 @@ impl InstrumentDiscovery {
                     continue;
                 }
                 settlement_currencies.insert(meta.settlement_currency.to_string());
-                index_names.insert(deribit_index_name(&meta.market));
+                let idx_name = deribit_index_name(&meta.market);
+                price_index_names.insert(idx_name.clone());
+                volatility_index_names.insert(idx_name);
                 let id = registry.upsert(meta.clone());
                 let mut with_id = meta;
                 with_id.id = id;
@@ -182,7 +187,7 @@ impl InstrumentDiscovery {
                 match meta.kind {
                     InstrumentKind::Perpetual if cfg.collect_perpetuals => {
                         settlement_currencies.insert(meta.settlement_currency.to_string());
-                        index_names.insert(deribit_index_name(&meta.market));
+                        price_index_names.insert(deribit_index_name(&meta.market));
                         let id = registry.upsert(meta.clone());
                         let mut with_id = meta;
                         with_id.id = id;
@@ -195,7 +200,7 @@ impl InstrumentDiscovery {
                             continue;
                         }
                         settlement_currencies.insert(meta.settlement_currency.to_string());
-                        index_names.insert(deribit_index_name(&meta.market));
+                        price_index_names.insert(deribit_index_name(&meta.market));
                         let id = registry.upsert(meta.clone());
                         let mut with_id = meta;
                         with_id.id = id;
@@ -247,7 +252,8 @@ impl InstrumentDiscovery {
             perpetuals = perpetuals.len(),
             dated_futures = dated_futures.len(),
             combos = combos.len(),
-            indices = index_names.len(),
+            price_indices = price_index_names.len(),
+            dvol_indices = volatility_index_names.len(),
             markets = ?cfg.markets,
             "discovered active Deribit instruments"
         );
@@ -258,7 +264,8 @@ impl InstrumentDiscovery {
             dated_futures,
             combos,
             settlement_currencies,
-            index_names,
+            price_index_names,
+            volatility_index_names,
         })
     }
 

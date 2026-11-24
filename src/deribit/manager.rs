@@ -129,18 +129,23 @@ impl WsManager {
             }
         }
         if self.app.deribit.collect_indices {
-            for idx in &catalog.index_names {
+            for idx in &catalog.price_index_names {
                 lifecycle_channels.push(format!("deribit_price_index.{idx}"));
+            }
+            for idx in &catalog.volatility_index_names {
                 lifecycle_channels.push(format!("deribit_volatility_index.{idx}"));
             }
         }
         let (lifecycle_tx, lifecycle_rx) = mpsc::channel(4096);
         self.lifecycle_rx = Some(lifecycle_rx);
-        self.spawn_shard(
-            ShardRole::LifecycleAndTrades,
-            lifecycle_channels,
-            Some(lifecycle_tx),
-        );
+        for (idx, chunk) in lifecycle_channels.chunks(max_per_conn).enumerate() {
+            let tx = if idx == 0 {
+                Some(lifecycle_tx.clone())
+            } else {
+                None
+            };
+            self.spawn_shard(ShardRole::LifecycleAndTrades, chunk.to_vec(), tx);
+        }
 
         // 2. Dedicated perpetuals & dated futures shard(s) (isolated from option chains!)
         let mut fut_inst_channels: Vec<(String, Vec<String>)> = Vec::new();

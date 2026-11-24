@@ -395,12 +395,15 @@ async fn run_instruments(cfg: AppConfig) -> anyhow::Result<()> {
         0
     };
     let index_channels = if cfg.deribit.collect_indices {
-        catalog.index_names.len() * 2
+        catalog.price_index_names.len() + catalog.volatility_index_names.len()
     } else {
         0
     };
     let est_channels = catalog.total_instruments() * per_inst + 1 + trade_channels + index_channels;
-    let est_shards = 1
+    let lifecycle_shards = (1 + trade_channels + index_channels)
+        .div_ceil(cfg.network.max_channels_per_conn)
+        .max(1);
+    let est_shards = lifecycle_shards
         + (catalog.perpetuals.len() + catalog.dated_futures.len())
             .saturating_mul(per_inst)
             .div_ceil((cfg.network.max_channels_per_conn / 2).max(20))
@@ -410,15 +413,10 @@ async fn run_instruments(cfg: AppConfig) -> anyhow::Result<()> {
             .saturating_mul(per_inst)
             .div_ceil((cfg.network.max_channels_per_conn * 90 / 100).max(2));
     println!(
-        "\nActive combos tracked for trade metadata: {} | Index/DVOL streams: {} ({})",
+        "\nActive combos tracked for trade metadata: {} | Spot indices: {} | DVOL indices: {}",
         catalog.combos.len(),
-        index_channels,
-        catalog
-            .index_names
-            .iter()
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(", ")
+        catalog.price_index_names.len(),
+        catalog.volatility_index_names.len()
     );
     println!(
         "Estimated subscription footprint: ~{est_channels} channels across ~{est_shards} WebSocket shards (Deribit IP limit: 32)"
