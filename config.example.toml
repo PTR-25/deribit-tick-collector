@@ -1,0 +1,106 @@
+# deribit-tick-collector configuration
+# Copy to config.toml and pass via: deribit-tick-collector collect --config config.toml
+
+[deribit]
+ws_url = "wss://www.deribit.com/ws/api/v2"
+rest_url = "https://www.deribit.com/api/v2"
+# Optional credentials (prefer env vars DERIBIT_CLIENT_ID / DERIBIT_CLIENT_SECRET)
+# client_id = ""
+# client_secret = ""
+
+# Markets to capture:
+#   Inverse markets: "BTC", "ETH"
+#   Linear USDC markets: "BTC_USDC", "ETH_USDC", "SOL_USDC", "XRP_USDC", "PAXG_USDC", "AVAX_USDC", ...
+#   Or ["ALL"] to collect every active option and future market on Deribit
+markets = ["BTC", "ETH"]
+
+# Instrument classes to subscribe to
+collect_options = true
+collect_perpetuals = true
+collect_dated_futures = true
+
+# Optional expiry filter for options/futures (omit or set 0 for no upper bound)
+# max_dte_days = 365
+
+# Order book feeds (full L2 depth: initial snapshot + tick-by-tick deltas with change_id tracking)
+collect_orderbook = true
+# Supported intervals: "raw" (tick-by-tick), "100ms", "agg2"
+options_book_interval = "raw"
+futures_book_interval = "raw"
+
+# Ticker feeds (open interest, mark/bid/ask IV, Greeks, funding rates, index/mark/underlying prices, 24h stats)
+collect_ticker = true
+# Supported modes:
+#   "incremental" -> incremental_ticker.<inst> (lowest wire bandwidth; collector materializes full state + changed_mask)
+#   "raw"         -> ticker.<inst>.raw
+#   "100ms"       -> ticker.<inst>.100ms
+#   "agg2"        -> ticker.<inst>.agg2
+ticker_mode = "incremental"
+# Emit policy:
+#   "all"              -> write every non-identical ticker update
+#   "interesting_only" -> write whenever OI, IV, Greeks, funding, volume, mark/index/last/underlying, or state changes
+#                         (skips pure BBO-only ticks already captured in book_updates)
+ticker_emit_policy = "all"
+
+# Public trade prints (only 2-4 channels per settlement currency; links trades/combos/liquidations to OI changes)
+collect_trades = true
+collect_combo_trades = true
+trades_interval = "raw"
+
+# Deribit spot price indices (deribit_price_index.*) and 30d DVOL volatility indices (deribit_volatility_index.*)
+collect_indices = true
+
+[network]
+# Deribit enforces a hard limit of 500 channels per WebSocket connection and 32 connections per IP.
+# Defaulting to 420 leaves headroom for intraday listings without re-sharding.
+max_channels_per_conn = 420
+# Max channels per JSON-RPC subscribe/unsubscribe frame
+subscribe_batch_size = 150
+# Pacing between subscribe RPC calls (Deribit sustained limit ~3.3 req/s)
+subscribe_pace_ms = 350
+# Deribit server heartbeat interval (seconds, minimum 10)
+heartbeat_interval_secs = 30
+# Reconnect watchdog timeout if no frame arrives at all (seconds)
+read_stall_timeout_secs = 90
+# TCP socket receive buffer size in KiB (4 MiB default to absorb volatility bursts)
+tcp_recv_buffer_kib = 4096
+# Periodic catalog reconciliation interval (seconds) in addition to real-time instrument.state stream
+catalog_reconcile_secs = 900
+# Bounded MPSC channel capacity between WS shards and storage engine
+ingest_channel_capacity = 262144
+
+[storage]
+data_dir = "./data"
+# Compression codec: "zstd" (recommended) or "snappy"
+compression = "zstd"
+# Zstd compression level (1..=22; 3 is optimal speed/size tradeoff for real-time ingest)
+zstd_level = 3
+# Flush in-memory SoA buffers to a Parquet row group once any threshold is reached
+max_rows_per_row_group = 250000
+flush_interval_secs = 30
+# Rotate finalized immutable .parquet segments on UTC hour boundary, rotation interval, or max size
+rotation_interval_secs = 900
+max_segment_size_mib = 256
+# Call fsync before atomic rename (.parquet.tmp -> .parquet)
+fsync_on_rotate = false
+# Local retention in hours (0 = keep forever; when S3 upload + delete_after_upload is enabled, files are pruned after upload)
+local_retention_hours = 0
+# Emit an anchor L2 snapshot (and quiet ticker OI anchor) at every UTC hour boundary so every
+# date=YYYY-MM-DD/hour=HH partition is independently replayable without reading prior hours.
+hourly_book_checkpoints = true
+
+[s3]
+enabled = false
+# bucket = "your-market-data-bucket"
+# prefix = "deribit"
+# region = "eu-west-2"
+# endpoint = ""
+delete_local_after_upload = false
+max_concurrent_uploads = 4
+max_retries = 5
+
+[telemetry]
+# Set metrics_bind = "" to disable the HTTP /metrics & /healthz server
+metrics_bind = "127.0.0.1:9108"
+stats_log_interval_secs = 30
+json_logs = false

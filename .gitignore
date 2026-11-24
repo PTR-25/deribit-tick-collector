@@ -1,0 +1,24 @@
+# Rust build artifacts
+/target
+Cargo.lock
+
+# Local data and logs
+/data
+/local_data
+/temp_data
+*.parquet
+*.parquet.tmp
+*.log
+
+# Secrets and local configs
+.env
+.env.*
+!.env.example
+config.local.toml
+
+# OS and editor noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

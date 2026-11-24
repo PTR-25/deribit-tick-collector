@@ -1,0 +1,52 @@
+[package]
+name = "deribit-tick-collector"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "High-performance Rust market data collector for Deribit options, perpetuals, and dated futures (tick-by-tick L2 order books, tickers/open interest, trades, and compressed Arrow/Parquet storage)"
+license = "MIT"
+repository = "https://github.com/PTR-25/deribit-tick-collector"
+keywords = ["deribit", "options", "market-data", "orderbook", "parquet"]
+categories = ["finance", "network-programming", "command-line-utilities"]
+
+[features]
+default = ["s3"]
+s3 = ["dep:object_store"]
+
+[dependencies]
+anyhow = "1.0"
+arrow-array = "60.2"
+arrow-schema = "60.2"
+bytes = "1.12"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.6", features = ["derive", "env"] }
+dotenvy = "0.15"
+futures-util = "0.3"
+object_store = { version = "0.14", default-features = false, features = ["aws"], optional = true }
+parking_lot = "0.12"
+parquet = { version = "60.2", default-features = false, features = ["arrow", "zstd", "snap", "simdutf8"] }
+rand = "0.10"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "gzip"] }
+rustc-hash = "2.1"
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+smallvec = { version = "1.15", features = ["serde"] }
+socket2 = { version = "0.6", features = ["all"] }
+thiserror = "2.0"
+tokio = { version = "1.54", features = ["full"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+toml = "1.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+url = "2.5"
+
+[dev-dependencies]
+tempfile = "3.27"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

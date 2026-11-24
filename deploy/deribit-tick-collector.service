@@ -1,0 +1,22 @@
+[Unit]
+Description=Deribit Options, Futures & Ticker Market Data Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=collector
+Group=collector
+WorkingDirectory=/var/lib/deribit-tick-collector
+EnvironmentFile=-/etc/deribit-tick-collector/env
+ExecStart=/usr/local/bin/deribit-tick-collector collect --config /etc/deribit-tick-collector/config.toml
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/deribit-tick-collector
+
+[Install]
+WantedBy=multi-user.target
